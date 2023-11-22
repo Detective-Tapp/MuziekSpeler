@@ -17,6 +17,7 @@ using System.Windows.Forms;
 using Windows.Media.PlayTo;
 using System.Text;
 using Xamarin.Forms;
+using Windows.ApplicationModel.UserDataTasks;
 
 namespace MuziekSpeler
 {
@@ -46,7 +47,7 @@ namespace MuziekSpeler
         ///  [X]    UI
         ///  [X]    Play mp3 files.
         ///  [X]    Basic UI functionality.
-        ///  []     Working trackbar.
+        ///  [X]     Working trackbar.
         ///  []     Choose path of song library.
         ///  []     Volume slider.
         ///  []     Display metadata.
@@ -57,8 +58,6 @@ namespace MuziekSpeler
         ///  []     Tap into system audio for visualizer?
         /// 
         /// </summary>
-
-        MusicID3Tag ID3Tags;
 
         // Instead of getting confused I found the right thing this time. MediaPlayer and not WindowsMediaPlayer.
         // And we are using MediaPlayer here instead of BackgroundMediaPlayer because that is deprecated as of win 10 V-1703~ 
@@ -73,7 +72,10 @@ namespace MuziekSpeler
         IEnumerable<string> osuSongs = Directory.EnumerateDirectories("D:\\osu!\\Songs");
 
         List<Bitmap> covers = new List<Bitmap>();
+
         private bool trackPlaying;
+        private bool trackbarMax;
+        private bool trackbarMouseDown;
 
         public Form1()
         {
@@ -89,27 +91,69 @@ namespace MuziekSpeler
             _player.MediaFailed += Failed;
             _player.MediaOpened += Opened;
 
+            trackBar1.ValueChanged += Changed;
+            trackBar1.MouseDown += OnMouseDown;
+            trackBar1.MouseUp += OnMouseUp;
+
             trackPosition = new Thread(TrackPos);
 
-            ID3Tags = new MusicID3Tag();
         }
 
+        private void OnMouseUp(object sender, MouseEventArgs e)
+        {
+            _player.Position = TimeSpan.FromMilliseconds(trackBar1.Value * 100);
+            trackbarMouseDown = false;
+        }
+
+        private void OnMouseDown(object? sender, EventArgs e)
+        {
+            trackbarMouseDown = true;
+        }
+
+        private void Changed(object? sender, EventArgs e)
+        {
+            trackBar1.Update();
+            if (trackBar1.Value == trackBar1.Maximum)
+            {
+                trackbarMax = true;
+            }
+            // If the user resets the trackbar after song finished playing, then replay the song at the set position.
+            if (!trackPlaying)
+            {
+                _player.Play();
+                _player.Position = TimeSpan.FromMilliseconds(trackBar1.Value * 100);
+                trackPlaying = true;
+                trackbarMax = false;
+                trackPosition = new Thread(TrackPos);
+                trackPosition.Start();
+            }
+        }
+        
         private void Failed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
             MessageBox.Show(args.ErrorMessage);
         }
 
         private void TrackPos()
-        {// Safety for if the trackbar is at max but somehow did not corrospond with trackended
-            while (trackPlaying && trackBar1.Value < trackBar1.Maximum)
+        {// Add safety for if the trackbar is at max but somehow did not corrospond with trackended
+            while (trackPlaying)
             {
-                if (trackBar1.InvokeRequired)
+                if (!trackbarMouseDown) 
                 {
-                    Invoke(new Action(() => trackBar1.Value = (int)(_player.Position.TotalMilliseconds / 100)));
-                }
-                else
-                {
-                    trackBar1.Value = (int)(_player.Position.TotalMilliseconds / 100);
+                    if (trackbarMax)
+                    {
+                        trackbarMax = false;
+                        return;
+                    }
+                    if (trackBar1.InvokeRequired)
+                    {
+                        Invoke(new Action(() => trackBar1.Value = (int)(_player.Position.TotalMilliseconds / 100)));
+
+                    }
+                    else
+                    {
+                        trackBar1.Value = (int)(_player.Position.TotalMilliseconds / 100);
+                    } 
                 }
             }
         }
@@ -130,22 +174,22 @@ namespace MuziekSpeler
 
         private void Opened(MediaPlayer sender, object args)
         {
-            // Remove the Uri part of the string "file:///" <-- how cool that you can annotade files on the system! The More You Know!
-            ID3Tags.path = _tracks[0].Uri.ToString().Remove(0,8);
-
             WriteTextSafe(PathTxtb, _tracks[0].Uri.ToString());
             WriteTextSafe(DurationTxtb, _player.NaturalDuration.ToString(@"h\:mm\:ss"));
 
             trackPlaying = true;
-            trackPosition.Start();
+            if(trackPosition.ThreadState == ThreadState.Stopped)
+                trackPosition = new Thread(TrackPos);
+            if(trackPosition.ThreadState != ThreadState.Running)
+                trackPosition.Start();
 
             if (trackBar1.InvokeRequired)
             {
                 trackBar1.Invoke(new Action(() => trackBar1.Maximum = (int)(_player.NaturalDuration.TotalMilliseconds / 100))); 
             }
             else
-            {   // Give two seconds of wriggle room
-                trackBar1.Maximum = (int)(_player.NaturalDuration.TotalMilliseconds / 100) + 20;
+            {   // Devide by 100 to get 10's of seconds. for smoother animation of the trackbar.
+                trackBar1.Maximum = (int)(_player.NaturalDuration.TotalMilliseconds / 100);
             }
 
             /*
@@ -254,51 +298,6 @@ namespace MuziekSpeler
         {
             if (AutoChb.Checked) { _player.AutoPlay = true; }
             else { _player.AutoPlay = false; }
-        }
-    }
-    class MusicID3Tag
-    {
-        public byte[] TAGID = new byte[3];
-        public byte[] Title = new byte[30];
-        public byte[] Artist = new byte[30];
-        public byte[] Album = new byte[30];
-        public byte[] Year = new byte[4];
-        public byte[] Comment = new byte[30];
-        public byte[] Genre = new byte[1];
-
-        public string path;
-
-        public string[] GetTags()
-        {
-            using (FileStream fs = File.OpenRead(path))
-            {
-                if (fs.Length >= 128)
-                {
-                    MusicID3Tag tag = new MusicID3Tag();
-                    fs.Seek(-128, SeekOrigin.End);
-                    fs.Read(TAGID, 0, tag.TAGID.Length);
-                    fs.Read(Title, 0, tag.Title.Length);
-                    fs.Read(Artist, 0, tag.Artist.Length);
-                    fs.Read(Album, 0, tag.Album.Length);
-                    fs.Read(Year, 0, tag.Year.Length);
-                    fs.Read(Comment, 0, tag.Comment.Length);
-                    fs.Read(Genre, 0, tag.Genre.Length);
-                    string theTAGID = Encoding.Default.GetString(tag.TAGID);
-
-                    if (theTAGID.Equals("TAG"))
-                    {
-                        string Title = Encoding.Default.GetString(tag.Title);
-                        string Artist = Encoding.Default.GetString(tag.Artist);
-                        string Album = Encoding.Default.GetString(tag.Album);
-                        string Year = Encoding.Default.GetString(tag.Year);
-                        string Comment = Encoding.Default.GetString(tag.Comment);
-                        string Genre = Encoding.Default.GetString(tag.Genre);
-
-                        return new string[] {Title, Artist, Album, Year, Comment, Genre };
-                    }
-                }
-            }
-            return null;
         }
     }
 }
