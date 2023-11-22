@@ -29,7 +29,7 @@ namespace MuziekSpeler
         /// To make a visualizer for audio you first need to aqquire said audio. I searched a bit on the possibility of aquiring the system audio and found this to be a step way too big to be the first.
         /// So instead I thought about just playing a .mp3 file first. This started off with MCISendString which I hold dear as a simple means of effectifly acieving said goal. In the documentation however
         /// I read that there were new and better means of achieving the desired effect. Namely "Media Player" at first I got confused and implemented windows mediaplayer. 
-        /// after realizing my mistake I went and got mediaplayer working throug it's interface in winforms using the .net framework. When I had that working I realized that that was not the full implementation.
+        /// after realizing my mistake I went and got mediaplayer working through it's interface in winforms using the .net framework. When I had that working I realized that that was not the full implementation.
         /// Upon this thought I did some more reading and started working on making the app with the .Net Core instead. 
         /// 
         /// All this led me to discover multiple things:
@@ -53,6 +53,7 @@ namespace MuziekSpeler
         ///  []     Drag & drop song playing.
         ///  []     Full UI functionality.
         ///  []     Visualizer.
+        ///  []     Video playing.
         ///  []     Tap into system audio for visualizer?
         /// 
         /// </summary>
@@ -166,7 +167,7 @@ namespace MuziekSpeler
 
             if (_tracks.Count > 0) 
             { 
-                _tracks.Remove(_tracks.First());
+                _tracks.RemoveAt(0);
             } 
         }
 
@@ -206,8 +207,6 @@ namespace MuziekSpeler
 
         private void RandomBtn_Click(object sender, EventArgs e)
         {
-            Console.WriteLine("in PlayOsu");
-
             // TODO: add form controlls to set the amount of songs added.
             int rolls = 1;
 
