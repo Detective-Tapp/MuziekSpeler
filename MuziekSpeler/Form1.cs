@@ -18,6 +18,7 @@ using Windows.Media.PlayTo;
 using System.Text;
 using Xamarin.Forms;
 using Windows.ApplicationModel.UserDataTasks;
+using System.Xml.Linq;
 
 namespace MuziekSpeler
 {
@@ -47,9 +48,9 @@ namespace MuziekSpeler
         ///  [X]    UI
         ///  [X]    Play mp3 files.
         ///  [X]    Basic UI functionality.
-        ///  [X]     Working trackbar.
-        ///  []     Choose path of song library.
-        ///  []     Volume slider.
+        ///  [X]    Working trackbar.
+        ///  [X]    Choose path of song library.
+        ///  [X]    Volume slider.
         ///  []     Display metadata.
         ///  []     Drag & drop song playing.
         ///  []     Full UI functionality.
@@ -69,10 +70,10 @@ namespace MuziekSpeler
 
         // Putting this outside of RandomBtn_Click saves about 20 Mbs of memmory being used on rapid clicking.
         // Do need to have a way of updating this directory upon addition of new files though.
-        IEnumerable<string> osuSongs = Directory.EnumerateDirectories("D:\\osu!\\Songs");
+        IEnumerable<string> songsFolder = Directory.EnumerateDirectories("D:\\osu!\\Songs");
 
         List<Bitmap> covers = new List<Bitmap>();
-
+        
         private bool trackPlaying;
         private bool trackbarMax;
         private bool trackbarMouseDown;
@@ -84,24 +85,24 @@ namespace MuziekSpeler
             _player = new MediaPlayer
             {
                 AutoPlay = AutoChb.Checked,
-                IsLoopingEnabled = LoopChb.Checked
-                //Volume = volumeslider.value
+                IsLoopingEnabled = LoopChb.Checked,
+                Volume = VolumeBar.Value / 100d
             };
+
             _player.MediaEnded += Ended;
             _player.MediaFailed += Failed;
             _player.MediaOpened += Opened;
-
+            
             trackBar1.ValueChanged += Changed;
             trackBar1.MouseDown += OnMouseDown;
             trackBar1.MouseUp += OnMouseUp;
 
             trackPosition = new Thread(TrackPos);
-
         }
 
         private void OnMouseUp(object sender, MouseEventArgs e)
         {
-            _player.Position = TimeSpan.FromMilliseconds(trackBar1.Value * 100);
+            _player.PlaybackSession.Position = TimeSpan.FromMilliseconds(trackBar1.Value * 100);
             trackbarMouseDown = false;
         }
 
@@ -121,14 +122,14 @@ namespace MuziekSpeler
             if (!trackPlaying)
             {
                 _player.Play();
-                _player.Position = TimeSpan.FromMilliseconds(trackBar1.Value * 100);
+                _player.PlaybackSession.Position = TimeSpan.FromMilliseconds(trackBar1.Value * 100);
                 trackPlaying = true;
                 trackbarMax = false;
                 trackPosition = new Thread(TrackPos);
                 trackPosition.Start();
             }
         }
-        
+
         private void Failed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
             MessageBox.Show(args.ErrorMessage);
@@ -138,7 +139,7 @@ namespace MuziekSpeler
         {// Add safety for if the trackbar is at max but somehow did not corrospond with trackended
             while (trackPlaying)
             {
-                if (!trackbarMouseDown) 
+                if (!trackbarMouseDown)
                 {
                     if (trackbarMax)
                     {
@@ -147,13 +148,13 @@ namespace MuziekSpeler
                     }
                     if (trackBar1.InvokeRequired)
                     {
-                        Invoke(new Action(() => trackBar1.Value = (int)(_player.Position.TotalMilliseconds / 100)));
+                        Invoke(new Action(() => trackBar1.Value = (int)(_player.PlaybackSession.Position.TotalMilliseconds / 100)));
 
                     }
                     else
                     {
-                        trackBar1.Value = (int)(_player.Position.TotalMilliseconds / 100);
-                    } 
+                        trackBar1.Value = (int)(_player.PlaybackSession.Position.TotalMilliseconds / 100);
+                    }
                 }
             }
         }
@@ -175,21 +176,21 @@ namespace MuziekSpeler
         private void Opened(MediaPlayer sender, object args)
         {
             WriteTextSafe(PathTxtb, _tracks[0].Uri.ToString());
-            WriteTextSafe(DurationTxtb, _player.NaturalDuration.ToString(@"h\:mm\:ss"));
+            WriteTextSafe(DurationTxtb, _player.PlaybackSession.NaturalDuration.ToString(@"h\:mm\:ss"));
 
             trackPlaying = true;
-            if(trackPosition.ThreadState == ThreadState.Stopped)
+            if (trackPosition.ThreadState == ThreadState.Stopped)
                 trackPosition = new Thread(TrackPos);
-            if(trackPosition.ThreadState != ThreadState.Running)
+            if (trackPosition.ThreadState != ThreadState.Running)
                 trackPosition.Start();
 
             if (trackBar1.InvokeRequired)
             {
-                trackBar1.Invoke(new Action(() => trackBar1.Maximum = (int)(_player.NaturalDuration.TotalMilliseconds / 100))); 
+                trackBar1.Invoke(new Action(() => trackBar1.Maximum = (int)(_player.PlaybackSession.NaturalDuration.TotalMilliseconds / 100)));
             }
             else
             {   // Devide by 100 to get 10's of seconds. for smoother animation of the trackbar.
-                trackBar1.Maximum = (int)(_player.NaturalDuration.TotalMilliseconds / 100);
+                trackBar1.Maximum = (int)(_player.PlaybackSession.NaturalDuration.TotalMilliseconds / 100);
             }
 
             /*
@@ -209,15 +210,16 @@ namespace MuziekSpeler
             NumberTxtb.Text = "song number.";
             trackBar1.Maximum = Int16.Parse(_player.NaturalDuration.TotalSeconds.ToString());*/
 
-            if (_tracks.Count > 0) 
-            { 
+            if (_tracks.Count > 0)
+            {
                 _tracks.RemoveAt(0);
-            } 
+            }
         }
 
         private void Ended(MediaPlayer sender, object args)
         {
             trackPlaying = false;
+
             try
             {
                 // Now using MediaPlayer, way simpler and easier to acces than mciSendString. Mainly because it can be used with / by intellisense!
@@ -226,7 +228,10 @@ namespace MuziekSpeler
                     try { _player.Source = _tracks.First(); } catch (Exception ex) { MessageBox.Show(ex.Message); }
                     try { _player.Play(); } catch (Exception ex) { MessageBox.Show(ex.Message); }
                 }
-                else { return; }
+                else
+                {
+                    return;
+                }
 
                 if (covers.First() != null && covers.First() != pB1.Image)
                 {
@@ -241,11 +246,18 @@ namespace MuziekSpeler
             }
         }
 
-        [Obsolete]
         private void PlayBtn_Click(object sender, EventArgs e)
         {// to prevent duplicate code just use that method. The parameters don't matter since they are not being used anyway. They could be null for all we care.
-            if (_player.CurrentState != MediaPlayerState.Playing && _player.CurrentState != MediaPlayerState.Paused) { Ended(_player, sender); }
-            else if (_player.CurrentState == MediaPlayerState.Paused) { _player.Play(); }
+            if (_player.PlaybackSession.PlaybackState != MediaPlaybackState.Playing && _player.PlaybackSession.PlaybackState != MediaPlaybackState.Paused && !trackbarMax) { Ended(_player, sender); }
+            else if (trackBar1.Value == trackBar1.Maximum)
+            {
+                _player.Play();
+                trackPlaying = true;
+                trackbarMax = false;
+                trackPosition = new Thread(TrackPos);
+                trackPosition.Start();
+            }
+            else if (_player.PlaybackSession.PlaybackState == MediaPlaybackState.Paused) { _player.Play(); }
             else { _player.Pause(); }
         }
 
@@ -259,14 +271,14 @@ namespace MuziekSpeler
             // TODO: add parity safety for if one file fails to open the image or .mp3 that the lists do not end up uneven.
             for (int i = 0; i < rolls; i++)
             {
-                int number = random.Next(osuSongs.Count());
+                int number = random.Next(songsFolder.Count());
 
-                IEnumerable<string> f = Directory.EnumerateFiles(osuSongs.ElementAt(number));
+                IEnumerable<string> f = Directory.EnumerateFiles(songsFolder.ElementAt(number));
 
                 var name = from a in f where a.EndsWith(".mp3") select a;
                 if (name.Any())
                 {
-                    _tracks.Add(MediaSource.CreateFromUri(new Uri(name.First()))); 
+                    _tracks.Add(MediaSource.CreateFromUri(new Uri(name.First())));
                 }
 
                 var avi = from a in f where a.EndsWith(".avi") select a;
@@ -284,8 +296,8 @@ namespace MuziekSpeler
         }
 
         private void SkipBtn_Click(object sender, EventArgs e)
-        {// to prevent duplicate code just use that method. The parameters don't matter since they are not being used anyway. They could be null for all we care.
-            Ended(_player, sender);
+        {   // set the track position at it's end to let the events handle everything "naturally".
+            _player.PlaybackSession.Position = _player.PlaybackSession.NaturalDuration;
         }
 
         private void LoopChb_CheckStateChanged(object sender, EventArgs e)
@@ -298,6 +310,37 @@ namespace MuziekSpeler
         {
             if (AutoChb.Checked) { _player.AutoPlay = true; }
             else { _player.AutoPlay = false; }
+        }
+
+        private void VolumeBar_ValueChanged(object sender, EventArgs e)
+        {
+            _player.Volume = VolumeBar.Value / 100d;
+        }
+
+        private void comboBox1_DropDown(object sender, EventArgs e)
+        {
+            FolderBrowserDialog diag = new FolderBrowserDialog();
+            if (diag.ShowDialog() == DialogResult.OK)
+            {
+                FolderCmb.Text = diag.SelectedPath;
+                songsFolder = Directory.EnumerateDirectories(diag.SelectedPath);
+                if (diag.SelectedPath.Contains("osu!")){
+                    RandomBtn.Text = "Random Osu! song";
+                }
+                else { RandomBtn.Text = "Random song"; }
+                // Focus on the form so you can interract with the other elements without issue.
+                Focus();
+            }
+        }
+
+        private void FolderCmb_DragDrop(object sender, System.Windows.Forms.DragEventArgs e)
+        {   // Change the folder by dragging a file into the box.
+             
+        }
+
+        private void pB1_DragDrop(object sender, System.Windows.Forms.DragEventArgs e)
+        {   // add the mp3 to trackslist and play it.
+            //_tracks.Add(MediaSource.CreateFromUri(new Uri()));
         }
     }
 }

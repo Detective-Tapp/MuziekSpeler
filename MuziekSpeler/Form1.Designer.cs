@@ -50,8 +50,11 @@
             RightTxtb = new System.Windows.Forms.TextBox();
             LoopChb = new System.Windows.Forms.CheckBox();
             AutoChb = new System.Windows.Forms.CheckBox();
+            VolumeBar = new System.Windows.Forms.TrackBar();
+            FolderCmb = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)pB1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)VolumeBar).BeginInit();
             SuspendLayout();
             // 
             // pB1
@@ -63,6 +66,7 @@
             pB1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             pB1.TabIndex = 0;
             pB1.TabStop = false;
+            pB1.DragDrop += pB1_DragDrop;
             // 
             // PathTxtb
             // 
@@ -228,10 +232,11 @@
             trackBar1.AllowDrop = true;
             trackBar1.Cursor = System.Windows.Forms.Cursors.Hand;
             trackBar1.LargeChange = 15;
-            trackBar1.Location = new System.Drawing.Point(126, 695);
+            trackBar1.Location = new System.Drawing.Point(126, 701);
             trackBar1.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             trackBar1.Maximum = 180;
             trackBar1.Name = "trackBar1";
+            trackBar1.RightToLeft = System.Windows.Forms.RightToLeft.No;
             trackBar1.Size = new System.Drawing.Size(793, 45);
             trackBar1.SmallChange = 5;
             trackBar1.TabIndex = 18;
@@ -270,11 +275,38 @@
             AutoChb.UseVisualStyleBackColor = true;
             AutoChb.CheckStateChanged += AutoChb_CheckStateChanged;
             // 
+            // VolumeBar
+            // 
+            VolumeBar.Location = new System.Drawing.Point(736, 661);
+            VolumeBar.Maximum = 100;
+            VolumeBar.Name = "VolumeBar";
+            VolumeBar.Size = new System.Drawing.Size(183, 45);
+            VolumeBar.TabIndex = 22;
+            VolumeBar.Value = 75;
+            VolumeBar.ValueChanged += VolumeBar_ValueChanged;
+            // 
+            // FolderCmb
+            // 
+            FolderCmb.AllowDrop = true;
+            FolderCmb.DropDownHeight = 1;
+            FolderCmb.DropDownWidth = 1;
+            FolderCmb.FormattingEnabled = true;
+            FolderCmb.IntegralHeight = false;
+            FolderCmb.Location = new System.Drawing.Point(559, 664);
+            FolderCmb.Name = "FolderCmb";
+            FolderCmb.Size = new System.Drawing.Size(170, 23);
+            FolderCmb.TabIndex = 23;
+            FolderCmb.DropDown += comboBox1_DropDown;
+            FolderCmb.DragDrop += FolderCmb_DragDrop;
+            // 
             // Form1
             // 
+            AllowDrop = true;
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             ClientSize = new System.Drawing.Size(933, 752);
+            Controls.Add(FolderCmb);
+            Controls.Add(VolumeBar);
             Controls.Add(AutoChb);
             Controls.Add(LoopChb);
             Controls.Add(RightTxtb);
@@ -302,6 +334,7 @@
             Text = "Form1";
             ((System.ComponentModel.ISupportInitialize)pB1).EndInit();
             ((System.ComponentModel.ISupportInitialize)trackBar1).EndInit();
+            ((System.ComponentModel.ISupportInitialize)VolumeBar).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -330,6 +363,8 @@
         private System.Windows.Forms.TextBox RightTxtb;
         private System.Windows.Forms.CheckBox LoopChb;
         private System.Windows.Forms.CheckBox AutoChb;
+        private System.Windows.Forms.TrackBar VolumeBar;
+        private System.Windows.Forms.ComboBox FolderCmb;
     }
 }
 
