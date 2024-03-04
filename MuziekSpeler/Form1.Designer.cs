@@ -332,6 +332,7 @@
             Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             Name = "Form1";
             Text = "Form1";
+            Load += Form1_Load;
             ((System.ComponentModel.ISupportInitialize)pB1).EndInit();
             ((System.ComponentModel.ISupportInitialize)trackBar1).EndInit();
             ((System.ComponentModel.ISupportInitialize)VolumeBar).EndInit();

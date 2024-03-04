@@ -44,6 +44,10 @@ namespace MuziekSpeler
         /// In the end to get it working again. I had to downgrade the .Net version back to the .Net Core (instead of the more modern .Net 5 or greater)
         /// and laid some groundwork as to videoplaying by installing the Microsoft.Toolkit.Forms.Ui.Controlls (in order to use the "MediaPlayerElement") more info: https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/xaml-islands
         /// 
+        /// Look into WASAPI : https://learn.microsoft.com/en-us/windows/win32/coreaudio/wasapi
+        /// 
+        /// 
+        /// 
         ///     TODO:
         ///  [X]    UI
         ///  [X]    Play mp3 files.
@@ -73,7 +77,7 @@ namespace MuziekSpeler
         IEnumerable<string> songsFolder = Directory.EnumerateDirectories("D:\\osu!\\Songs");
 
         List<Bitmap> covers = new List<Bitmap>();
-        
+
         private bool trackPlaying;
         private bool trackbarMax;
         private bool trackbarMouseDown;
@@ -92,7 +96,7 @@ namespace MuziekSpeler
             _player.MediaEnded += Ended;
             _player.MediaFailed += Failed;
             _player.MediaOpened += Opened;
-            
+
             trackBar1.ValueChanged += Changed;
             trackBar1.MouseDown += OnMouseDown;
             trackBar1.MouseUp += OnMouseUp;
@@ -324,7 +328,8 @@ namespace MuziekSpeler
             {
                 FolderCmb.Text = diag.SelectedPath;
                 songsFolder = Directory.EnumerateDirectories(diag.SelectedPath);
-                if (diag.SelectedPath.Contains("osu!")){
+                if (diag.SelectedPath.Contains("osu!"))
+                {
                     RandomBtn.Text = "Random Osu! song";
                 }
                 else { RandomBtn.Text = "Random song"; }
@@ -335,12 +340,17 @@ namespace MuziekSpeler
 
         private void FolderCmb_DragDrop(object sender, System.Windows.Forms.DragEventArgs e)
         {   // Change the folder by dragging a file into the box.
-             
+
         }
 
         private void pB1_DragDrop(object sender, System.Windows.Forms.DragEventArgs e)
         {   // add the mp3 to trackslist and play it.
             //_tracks.Add(MediaSource.CreateFromUri(new Uri()));
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }
